@@ -9,9 +9,6 @@ class Vessel(models.Model):
         models.PositiveIntegerField()
     )  # Amount of refrigerant in the vessel, in kilograms
 
-
-
-
     def save(self, *args, **kwargs):
         if self.pk:  #Make sure the vessel exists (for updating)
             old_content = Vessel.objects.get(pk=self.pk).content
