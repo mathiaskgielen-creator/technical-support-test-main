@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 from ...models import Vessel
 import threading
+from django.db import transaction
+from django.core.exceptions import ValidationError
 
 
 class Command(BaseCommand):
@@ -14,17 +16,25 @@ class Command(BaseCommand):
     def run_simulation(self):
         barrier = threading.Barrier(2)
 
+        #Refactored the update logic to one method
+        def withdraw():
+            with transaction.atomic():
+                try:
+                    #Lock the row so only one thread can modify it at a time (needs to be inside a transaction)
+                    vessel = Vessel.objects.select_for_update().get(id=1)
+                    vessel.content -= 10.0
+                    vessel.save()
+                except ValidationError as e:
+                    #Print the error thrown by save in case of negative content
+                    print(e.messages[0])
+
         def user1():
             barrier.wait()
-            vessel = Vessel.objects.get(id=1)
-            vessel.content -= 10.0
-            vessel.save()
+            withdraw()
 
         def user2():
             barrier.wait()
-            vessel = Vessel.objects.get(id=1)
-            vessel.content -= 10.0
-            vessel.save()
+            withdraw()
 
         t1 = threading.Thread(target=user1)
         t2 = threading.Thread(target=user2)
